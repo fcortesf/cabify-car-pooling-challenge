@@ -1,0 +1,45 @@
+---
+stages:
+  - buildTest
+  - docker
+  - acceptance
+
+build:
+  stage: buildTest
+  image: docker:latest
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: tcp://docker:2375/
+  services:
+    - docker:dind
+  script:
+    - echo ${CI_JOB_TOKEN} | docker login --password-stdin -u ${CI_REGISTRY_USER} ${CI_REGISTRY}
+    - docker build --target testrunner -t ${CI_REGISTRY_IMAGE}-test:latest .
+    - docker run ${CI_REGISTRY_IMAGE}-test:latest
+
+build_image:
+  stage: docker
+  image: docker:latest
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: tcp://docker:2375/
+  services:
+    - docker:dind
+  script:
+    - echo ${CI_JOB_TOKEN} | docker login --password-stdin -u ${CI_REGISTRY_USER} ${CI_REGISTRY}
+    - docker build . -t ${CI_REGISTRY_IMAGE}:latest
+    - docker push ${CI_REGISTRY_IMAGE}:latest
+
+acceptance:
+  image: cabify/challenge:latest
+  stage: acceptance
+  only: 
+    - master
+  dependencies: []
+  services:
+    - name: ${CI_REGISTRY_IMAGE}:latest
+      alias: pooling
+  script:
+    - /harness --address http://pooling:9091 acceptance

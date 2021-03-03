@@ -1,0 +1,137 @@
+swagger: "2.0"
+info:
+  title: "Car pooling API"
+  version: 1.0.0
+  description: "Cabify Car pooling challenge"
+schemes:
+  - http
+tags:
+- name: "health"
+  description: "Health checks."
+- name: "car"
+  description: "Everything about cars."
+- name: "people"
+  description: "Operations about people."
+paths:
+  /status:
+    get:
+      tags:
+      - "health"
+      description: "Indicate the service has started up correctly and is ready to accept requests."
+      responses:
+        "200":
+          description: "OK. When the service is ready to receive requests."
+
+  /cars:
+    put:
+      tags:
+      - "car"
+      description: "Load the list of available cars in the service and remove all previous data (existing journeys and cars). This method may be called more than once during the life cycle of the service."
+      consumes:
+        - application/json
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "The list of cars to load."
+          required: true
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/CarDto"
+      responses:
+        "200":
+          description: "OK. When the list is registered correctly."
+        "400":
+          description: "Bad request. When there is a failure in the request format, expected headers, or the payload can't be unmarshalled."
+
+  /journey:
+    post:
+      tags:
+      - "people"
+      description: "A group of people requests to perform a journey."
+      consumes:
+        - application/json
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "The group of people that wants to perform the journey."
+          required: true
+          schema:
+            $ref: "#/definitions/GroupDto"
+      responses:
+        "202":
+          description: "Accepted. When the group is registered correctly."
+        "400":
+          description: "Bad Request. When there is a failure in the request format or the payload can't be unmarshalled."
+
+  /dropoff:
+    post:
+      tags:
+      - "people"
+      description: "A group of people requests to be dropped off. Whether they traveled or not."
+      consumes:
+        - application/x-www-form-urlencoded
+      parameters:
+        - in: "formData"
+          name: "ID"
+          description: "A form with the group ID."
+          required: true
+          type: integer
+          minimum: 1
+      responses:
+        "204":
+          description: "No content. When the group is unregistered correctly."
+        "404":
+          description: "Not Found. When the group is not to be found."
+        "400":
+          description: "Bad Request. When there is a failure in the request format or the payload can't be unmarshalled."
+
+  /locate:
+    post:
+      tags:
+      - "people"
+      description: "Given a group ID such that ID=X, return the car the group is traveling with, or no car if they are still waiting to be served."
+      consumes:
+        - application/x-www-form-urlencoded
+      produces:
+        - application/json
+      parameters:
+        - in: "formData"
+          name: "ID"
+          description: "A form with the group ID."
+          required: true
+          type: integer
+          minimum: 1
+      responses:
+        "200":
+          description: "OK. With the car as the payload when the group is assigned to a car."
+          schema:
+            $ref: "#/definitions/CarDto"
+        "204":
+          description: "No content. When the group is waiting to be assigned to a car."
+        "404":
+          description: "Not Found. When the group is not to be found."
+        "400":
+          description: "Bad Request. When there is a failure in the request format or the payload can't be unmarshalled."
+
+definitions:
+  CarDto:
+    type: object
+    properties:
+      id:
+        type: integer
+        minimum: 1
+      seats:
+        type: integer
+        minimum: 4
+        maximum: 6
+  GroupDto:
+    type: object
+    properties:
+      id:
+        type: integer
+        minimum: 1
+      people:
+        type: integer
+        minimum: 1
+        maximum: 6
